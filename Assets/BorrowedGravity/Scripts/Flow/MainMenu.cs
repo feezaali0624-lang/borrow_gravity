@@ -31,6 +31,7 @@ namespace BorrowGravity
             ("2 · Upside-Down Station", "Flip the station, find the engine.", 2),
             ("3 · Collapsing Return", "Carry the engine home — fast.", 3),
             ("4 · Event Horizon", "Cross the eclipse before the light goes out.", 4),
+            ("5 · Final Repair", "Every repair needs both powers at once.", 5),
         };
         // 0 solo, 1 host a room for two players, 2 join
         static readonly (string name, string hint)[] Modes =

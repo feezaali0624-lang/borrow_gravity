@@ -62,8 +62,12 @@ namespace BorrowGravity
             if (instance != null) instance.message = new Timed { text = text, start = Time.time, until = Time.time + duration };
         }
 
+        /// <summary>How long an instruction notification stays on screen (seconds).</summary>
+        public const float HintSeconds = 3f;
+
         public static void ShowHint(string text, float duration)
         {
+            duration = Mathf.Min(duration, HintSeconds);
             NetSession.UiText(3, text, duration);
             if (instance != null) instance.hint = new Timed { text = text, start = Time.time, until = Time.time + duration };
         }
@@ -147,7 +151,9 @@ namespace BorrowGravity
             DrawPauseButton(w, sm);
             DrawCameraButton(w, sm);
             // the centre banners stack top-down in this order, so two at once never overlap
-            slot = 74f;
+            // (the pause / camera buttons are on the right edge now, so the column starts near the top)
+            slot = 20f;
+            DrawObjective(w, sm);
             DrawEngine(w, h);
             DrawMessages(w, h);
             DrawWarning(w);
@@ -357,26 +363,35 @@ namespace BorrowGravity
             }
         }
 
-        void DrawObjective(float w)
+        /// <summary>
+        /// The objective banner, shown during play in the centre column.
+        /// Uses the text the stage set through <see cref="SetObjective"/>, or the StageManager's own objective text.
+        /// </summary>
+        void DrawObjective(float w, StageManager sm)
         {
-            var r = new Rect(w * 0.5f - 230, 14, 460, 74);
+            if (sm == null || sm.State != StageState.Playing) return;
+            string text = !string.IsNullOrEmpty(objectiveText) ? objectiveText : sm.objectiveText;
+            if (string.IsNullOrEmpty(text)) return;
+
+            bool sectionOn = Time.time < sectionUntil && !string.IsNullOrEmpty(sectionTitle);
+            var r = new Rect(w * 0.5f - 230, Slot(74 + (sectionOn ? 24f : 0f)), 460, 74);
             MenuStyle.Glass(r);
             MenuStyle.Box(r, MenuStyle.W25, 1f);
             MenuStyle.Brackets(r);
-            var sm = StageManager.Instance;
-            MenuStyle.Text(new Rect(r.x, r.y + 12, r.width, 12), sm != null ? StageShortTitle(sm.stageTitle).ToUpperInvariant() : "", UIKit.Face.Heavy, 10, MenuStyle.W50, 0.3f, TextAnchor.UpperCenter);
-            MenuStyle.Text(new Rect(r.x, r.y + 30, r.width, 26), objectiveText.ToUpperInvariant(), UIKit.Face.Display, 20, 1f, 0.1f, TextAnchor.UpperCenter);
+            MenuStyle.Text(new Rect(r.x, r.y + 12, r.width, 12), StageShortTitle(sm.stageTitle).ToUpperInvariant(), UIKit.Face.Heavy, 10, MenuStyle.W50, 0.3f, TextAnchor.UpperCenter);
+            MenuStyle.Text(new Rect(r.x, r.y + 30, r.width, 26), text.ToUpperInvariant(), UIKit.Face.Display, 20, 1f, 0.1f, TextAnchor.UpperCenter);
             if (!string.IsNullOrEmpty(TimeOfDay.CurrentLabel))
                 MenuStyle.Text(new Rect(r.xMax - 110, r.yMax - 16, 100, 12), TimeOfDay.CurrentLabel.ToUpperInvariant(), UIKit.Face.Heavy, 9, MenuStyle.W50, 0.3f, TextAnchor.UpperRight);
-            if (Time.time < sectionUntil && !string.IsNullOrEmpty(sectionTitle))
+            if (sectionOn)
             {
                 float a = Mathf.Clamp01(sectionUntil - Time.time);
-                MenuStyle.Text(new Rect(w * 0.5f - 300, r.yMax + 8, 600, 18), sectionTitle.ToUpperInvariant(), UIKit.Face.Heavy, 12, MenuStyle.W80 * a, 0.25f, TextAnchor.UpperCenter);
+                MenuStyle.Text(new Rect(w * 0.5f - 300, r.yMax + 6, 600, 18), sectionTitle.ToUpperInvariant(), UIKit.Face.Heavy, 12, MenuStyle.W80 * a, 0.25f, TextAnchor.UpperCenter);
             }
         }
 
         static string StageShortTitle(string t)
         {
+            if (string.IsNullOrEmpty(t)) return "";
             int i = t.IndexOf('—');
             return i > 0 ? t.Substring(0, i).Trim() + "  ·  " + t.Substring(i + 1).Trim() : t;
         }
@@ -493,51 +508,55 @@ namespace BorrowGravity
             float a = Fade(message);
             if (a > 0f)
                 UIKit.Text(new Rect(w * 0.5f - 420, h * 0.60f, 840, 56), message.text, UIKit.Style(UIKit.Face.Heavy, 22, new Color(1, 1, 1, a), TextAnchor.MiddleCenter, true));
-            float b = Fade(hint, 0.3f, 0.5f);
+
+            // instruction notification: slides in from the top, stays ~3 s, fades out
+            float b = Fade(hint, 0.25f, 0.4f);
             if (b > 0f)
             {
-                // under the title banner: in third person the bottom-middle of the screen is the player's back
-                var r = new Rect(w * 0.5f - 400, Slot(74), 800, 74);
+                var r = new Rect(w * 0.5f - 320f, Slot(60) - (1f - b) * 18f, 640f, 60f);
                 var old = GUI.color;
                 GUI.color = new Color(1, 1, 1, b);
+                MenuStyle.Glass(r);
                 MenuStyle.Box(r, MenuStyle.W50, 1f);
                 MenuStyle.Brackets(r);
-                MenuStyle.Text(new Rect(r.x + 18, r.y + 6, 120, 12), "INSTRUCTIONS", UIKit.Face.Heavy, 9, MenuStyle.W50, 0.3f, TextAnchor.UpperLeft);
-                UIKit.Text(new Rect(r.x + 18, r.y + 18, r.width - 36, r.height - 22), hint.text, UIKit.Style(UIKit.Face.Body, 15, UIKit.Ink, TextAnchor.MiddleLeft, true));
+                UIKit.Text(new Rect(r.x + 18f, r.y + 6f, r.width - 36f, r.height - 12f), hint.text, UIKit.Style(UIKit.Face.Body, 15, UIKit.Ink, TextAnchor.MiddleCenter, true));
                 GUI.color = old;
             }
         }
 
-        /// <summary>Touch screens have no Esc key: a small outline pause button next to the objective banner.</summary>
+        /// <summary>Size of the pause and camera buttons (right edge, under the power panel).</summary>
+        public const float BtnSize = 60f;
+
+        /// <summary>Pause button: right edge, under the power panel.</summary>
         void DrawPauseButton(float w, StageManager sm)
         {
             if (sm == null || sm.State != StageState.Playing) return;
-            var r = new Rect(w * 0.5f - 21, 18, 42, 42); // top centre (the objective box that sat beside it is gone)
+            var r = new Rect(w - 18f - BtnSize, 132f, BtnSize, BtnSize);
             bool hover = r.Contains(Event.current.mousePosition);
             MenuStyle.Box(r, hover ? 1f : MenuStyle.W50, 1f);
-            UIKit.Fill(new Rect(r.center.x - 7, r.y + 13, 4, 16), MenuStyle.White(1f));
-            UIKit.Fill(new Rect(r.center.x + 3, r.y + 13, 4, 16), MenuStyle.White(1f));
+            UIKit.Fill(new Rect(r.center.x - 10f, r.y + 18f, 6f, 24f), MenuStyle.White(1f));
+            UIKit.Fill(new Rect(r.center.x + 4f, r.y + 18f, 6f, 24f), MenuStyle.White(1f));
             if (hover && Event.current.type == EventType.MouseDown) { Event.current.Use(); sm.TogglePause(); }
         }
-        /// <summary>Camera switch button on the gameplay screen, next to the pause button.</summary>
+
+        /// <summary>Camera switch button: right edge, under the pause button.</summary>
         void DrawCameraButton(float w, StageManager sm)
         {
             if (sm == null || sm.State != StageState.Playing) return;
-            var r = new Rect(w * 0.5f + 33f, 18, 42, 42); // right of the pause button
+            var r = new Rect(w - 18f - BtnSize, 132f + BtnSize + 12f, BtnSize, BtnSize);
             bool hover = r.Contains(Event.current.mousePosition);
             MenuStyle.Box(r, hover ? 1f : MenuStyle.W50, 1f);
-            // small camera icon: body + lens
-            MenuStyle.Box(new Rect(r.x + 9, r.y + 14, 24, 17), MenuStyle.W80, 1f);
-            MenuStyle.Box(new Rect(r.center.x - 4, r.y + 18, 8, 8), 1f, 1f, 4f);
-            // the current view, under the button
+            MenuStyle.Box(new Rect(r.x + 12f, r.y + 19f, 36f, 25f), MenuStyle.W80, 1f);
+            MenuStyle.Box(new Rect(r.center.x - 6f, r.y + 26f, 12f, 12f), 1f, 1f, 6f);
             string view = ControlSettings.View == CameraView.Follow ? "FOLLOW" : ControlSettings.View == CameraView.ThirdPerson ? "3RD PERSON" : "SIDE VIEW";
-            MenuStyle.Text(new Rect(r.x - 30, r.yMax + 4, r.width + 60, 12), view, UIKit.Face.Heavy, 9, MenuStyle.W50, 0.2f, TextAnchor.UpperCenter);
+            MenuStyle.Text(new Rect(r.xMax - 120f, r.yMax + 4f, 120f, 12f), view, UIKit.Face.Heavy, 9, MenuStyle.W50, 0.2f, TextAnchor.UpperRight);
             if (hover && Event.current.type == EventType.MouseDown)
             {
                 Event.current.Use();
                 StageManager.CycleCamera();
             }
         }
+
         void DrawHelp(float w, float h, StageManager sm)
         {
             if (sm != null && sm.ResetHold > 0f)
@@ -641,8 +660,11 @@ namespace BorrowGravity
 
         static readonly string[] StageHints =
         {
-            "Learn to bend gravity together.", "Flip the station, find the engine.", "Carry the engine home — fast.",
-            "Cross the eclipse before the light goes out."
+            "Learn to bend gravity together.",
+            "Flip the station, find the engine.",
+            "Carry the engine home — fast.",
+            "Cross the eclipse before the light goes out.",
+            "Every repair needs both powers at once."   // Stage 5
         };
 
         /// <summary>
@@ -723,6 +745,7 @@ namespace BorrowGravity
             ("FIND THE ENGINE VAULT", "Make it through the upside-down station — the vault waits at the far end."),
             ("GET BACK TO THE SHIP", "The station is falling apart. Carry the engine home before it's gone."),
             ("CROSS THE EVENT HORIZON", "The eclipse is bending gravity. Carry each other through before the light goes out."),
+            ("REPAIR THE SHIP", "One bends gravity, the other freezes the machinery. Finish every repair together."),   // Stage 5
         };
 
         void DrawMission(float w, float h, StageManager sm)

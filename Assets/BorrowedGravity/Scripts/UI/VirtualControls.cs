@@ -24,7 +24,9 @@ namespace BorrowGravity
         public float dragLookSpeed = 0.28f;
         [Tooltip("Camera turn per screen pixel of mouse movement (degrees).")]
         public float mouseLookSpeed = 0.12f;
-
+        /// <summary>Sab on-screen buttons aur joystick ko itna bada karo (1 = purani size).</summary>
+        const float StickBoost = 1.3f;    // joystick aur arrows
+        const float ButtonBoost = 1.35f;  // jump, gravity, nullify
         // home = where the joystick sits (it never moves); center = its centre (always home); zone = the left half of
         // this player's screen, kept for the stick (no camera turning there)
         /// <summary>A press this many stick radii from the joystick's centre still grabs it.</summary>
@@ -58,8 +60,8 @@ namespace BorrowGravity
         Vector2 ArrowCenter(Stick st, int i) => st.home + ArrowDirs[i] * SR * 0.8f;
 
         // sizes chosen in Settings (ControlSettings)
-        float SR => stickRadius * ControlSettings.StickSize;
-        float BR => buttonRadius * ControlSettings.ButtonSize;
+        float SR => stickRadius * ControlSettings.StickSize * StickBoost;
+        float BR => buttonRadius * ControlSettings.ButtonSize * ButtonBoost;
 
         void Layout()
         {
@@ -156,6 +158,8 @@ namespace BorrowGravity
         bool OnControl(Vector2 pos)
         {
             if (pos.y < 110f) return true; // power panels, objective banner, pause button
+                                           // pause + camera buttons (right edge, GameUI)
+            if (pos.x > UIKit.Width - 18f - GameUI.BtnSize - 10f && pos.y > 120f && pos.y < 132f + GameUI.BtnSize * 2f + 40f) return true;
             if (!Visible) return false;
             for (int p = 0; p < Max; p++)
                 if (Shows(p) && sticks[p].zone.Contains(pos)) return true;
@@ -290,7 +294,7 @@ namespace BorrowGravity
             var rect = new Rect(b.center.x - BR, b.center.y - BR, BR * 2f, BR * 2f);
             if (b.held) MenuStyle.Box(rect, MenuStyle.W25, 0f, BR);
             MenuStyle.Box(rect, b.held ? 1f : MenuStyle.W50, 1f, BR);
-            MenuStyle.Text(rect, label, UIKit.Face.Heavy, Mathf.RoundToInt(Mathf.Clamp(11f * ControlSettings.ButtonSize, 9f, 15f)), 1f, 0.15f);
+            MenuStyle.Text(rect, label, UIKit.Face.Heavy, Mathf.RoundToInt(Mathf.Clamp(13f * ControlSettings.ButtonSize, 11f, 18f)), 1f, 0.15f);
         }
     }
 }

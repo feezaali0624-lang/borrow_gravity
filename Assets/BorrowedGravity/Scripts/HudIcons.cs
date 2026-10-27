@@ -52,5 +52,5 @@ namespace BorrowGravity
 
     public enum HudHazard { General, FallingDebris, SwingingCable, BridgeCrack, GravityShift, Decompression, Electric }
 
-    public enum HudObjective { ReachStation, FindEngine, ReturnToShip, CrossEventHorizon }
+    public enum HudObjective { ReachStation, FindEngine, ReturnToShip, CrossEventHorizon, RepairShip }
 }

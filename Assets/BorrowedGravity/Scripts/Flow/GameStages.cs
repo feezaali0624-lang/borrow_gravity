@@ -8,7 +8,7 @@ namespace BorrowGravity
     /// </summary>
     public class GameStages : MonoBehaviour
     {
-        public const int Intro = 0, Outro = 5;
+        public const int Intro = 0, Outro = 6;
 
         public static GameStages Instance { get; private set; }
 

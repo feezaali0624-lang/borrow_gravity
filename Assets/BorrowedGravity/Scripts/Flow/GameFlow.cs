@@ -14,7 +14,7 @@ namespace BorrowGravity
         public const string GameScene = "Game";
         public const string IntroScene = "Intro";
         public const string OutroScene = "Outro";
-        public static readonly string[] StageScenes = { "Stage1", "Stage2", "Stage3", "Stage4" };
+        public static readonly string[] StageScenes = { "Stage1", "Stage2", "Stage3", "Stage4", "Stage5" };
         const string UnlockKey = "bg_unlocked_stage";
 
         /// <summary>True when a stage was entered from the menu or a previous stage (shows the story intro).</summary>
